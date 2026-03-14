@@ -20,7 +20,6 @@ export const createPost = catchAsync(async (req, res) => {
       title,
       content,
       image: imagePath,
-      authorId: req.user.id,
     },
   });
 
@@ -126,13 +125,6 @@ export const deletePost = catchAsync(async (req, res) => {
     throw error;
   }
 
-  // check the access
-  if (post.authorId !== req.user.id) {
-    const error = new Error("You are not authorized to delete this post!");
-    error.statusCode = 403;
-    throw error;
-  }
-
   // delete the image from hard disk
   if (post.image) {
     const filePath = path.join("public", post.image);
@@ -174,13 +166,6 @@ export const updatePost = catchAsync(async (req, res) => {
   if (!post) {
     const error = new Error("Post not found!");
     error.statusCode = 404;
-    throw error;
-  }
-
-  // Check the access (just the author can edit)
-  if (post.authorId !== req.user.id) {
-    const error = new Error("You are not authorized to edit this post!");
-    error.statusCode = 403;
     throw error;
   }
 

@@ -1,4 +1,6 @@
+import { link } from "fs";
 import path from "path";
+import { title } from "process";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,9 +10,9 @@ export const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Blog API Documentation",
+      title: "Personal API Documentation",
       version: "1.0.0",
-      description: "A simple Blog API built with Node.js, Express, and Prisma",
+      description: "A simple Personal API built with Node.js, Express, and Prisma",
     },
     servers: [
       { url: "http://localhost:3000", description: "Local development server" },
@@ -214,6 +216,31 @@ export const swaggerOptions = {
             204: { description: "Post deleted" },
           },
         },
+      },
+      // --- PORTFOLIO ---
+      "/api/portfolios": {
+        post: {
+          summary : "Create a portfolio",
+          tags: ["Portfolio"],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["title", "link"],
+                  properties: {
+                    title: { type: "string" },
+                    link: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Portfolio created" },
+          },
+        }
       },
       // --- COMMENTS ---
       "/api/comments": {

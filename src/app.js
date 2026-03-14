@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import authRouter from "./routes/authRoutes.js";
 import postRouter from "./routes/postRoutes.js";
+import portfolioRouter from "./routes/portfolioRoutes.js"
 import commentRouter from "./routes/commentRoutes.js";
 import { errorHandler } from "./middlewares/errorMiddleware.js";
 import { swaggerOptions } from "./configs/swagger.js";
@@ -38,6 +39,7 @@ app.use("/uploads", express.static("public/uploads"));
 app.use("/api/auth", authRouter);
 app.use("/api/posts", postRouter);
 app.use("/api/comments", commentRouter);
+app.use("/api/portfolios", portfolioRouter)
 
 // Error Handling
 app.all(/.*/, (req, res, next) => {

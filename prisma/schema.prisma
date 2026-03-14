@@ -14,47 +14,53 @@ datasource db {
 }
 
 model User {
-  id          Int       @id  @default(autoincrement())
-  email       String    @unique
-  password    String    
-  name        String?
-  role        String    @default("USER") // USER, ADMIN 
-  createdAt   DateTime  @default(now())
-
-  // (Relations)
-  posts     Post[]
-  comments  Comment[]
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
 }
 
 model Post {
-  id          Int         @id @default(autoincrement())
-  title       String       
-  content     String
-  published   Boolean     @default(false)
-  image       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // post owner 
-  authorId    Int 
-  author      User        @relation(fields: [authorId], references: [id])
-
-  // post comments
-  comments    Comment[]
-
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  published Boolean  @default(false)
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+model Portfolio {
+  id        Int      @id @default(autoincrement())
+  title     String
+  link      String
+  createdAt DateTime @default(now())
+}
 
-model Comment {
-  id          Int          @id @default(autoincrement())
-  text        String  
-  createdAt   DateTime     @default(now())
-  
-  // comments writer 
-  userId      Int
-  user        User          @relation(fields: [userId], references: [id])
+model About {
+  id               Int      @id @default(autoincrement())
+  shortDescription String
+  description      String
+  resumeUrl        String
+  contactLink      String
+  createdAt        DateTime @default(now())
+}
 
-  // this comment for which post ? 
-  postId      Int
-  post        Post          @relation(fields: [postId], references: [id] , onDelete: Cascade)
-} 
+model Experience {
+  id          Int      @id @default(autoincrement())
+  position    String
+  company     String
+  location    String
+  startDate   DateTime
+  endDate     DateTime?
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model Skill {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  createdAt DateTime @default(now())
+}
