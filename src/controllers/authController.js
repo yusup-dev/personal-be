@@ -10,54 +10,6 @@ const signToken = (id) => {
   });
 };
 
-// 1. SIGNUP
-export const signup = async (req, res) => {
-  const { name, email, password } = req.body;
-
-  // check the email and password fill
-  if (!name || !email || !password) {
-    const error = new Error("Name, email and password are required!");
-    error.statusCode = 400;
-    throw error;
-  }
-  // Check the email has been registered or not
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-
-  if (existingUser) {
-    const error = new Error("This email has already been registered!");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  // hash password
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  // save into database
-  const newUser = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-    },
-  });
-
-  // create token for login automatically
-  const token = signToken(newUser.id);
-
-  // send final response
-  res.status(201).json({
-    status: "success",
-    token,
-    data: {
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-      },
-    },
-  });
-};
-
 // 2. LOGIN
 export const login = async (req, res) => {
   try {

@@ -3,8 +3,11 @@ import cors from "cors";
 import morgan from "morgan";
 import authRouter from "./routes/authRoutes.js";
 import postRouter from "./routes/postRoutes.js";
+import skillRouter from "./routes/skillRoutes.js"
+import experienceRouter  from "./routes/experienceRoutes.js"
+import aboutRouter from "./routes/aboutRoutes.js"
 import portfolioRouter from "./routes/portfolioRoutes.js"
-import commentRouter from "./routes/commentRoutes.js";
+import educationRouter from "./routes/educationRoutes.js";
 import { errorHandler } from "./middlewares/errorMiddleware.js";
 import { swaggerOptions } from "./configs/swagger.js";
 import swaggerJSDoc from "swagger-jsdoc";
@@ -38,8 +41,12 @@ app.use("/uploads", express.static("public/uploads"));
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/posts", postRouter);
-app.use("/api/comments", commentRouter);
-app.use("/api/portfolios", portfolioRouter)
+app.use("/api/portfolios", portfolioRouter);
+app.use("/api/experiences", experienceRouter);
+app.use("/api/about", aboutRouter);
+app.use("/api/educations", educationRouter);
+app.use("/api/skills", skillRouter)
+
 
 // Error Handling
 app.all(/.*/, (req, res, next) => {

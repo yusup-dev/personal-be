@@ -26,7 +26,8 @@ CREATE TABLE "Post" (
 CREATE TABLE "Portfolio" (
     "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
-    "link" TEXT NOT NULL,
+    "github" TEXT,
+    "article" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Portfolio_pkey" PRIMARY KEY ("id")
@@ -34,7 +35,8 @@ CREATE TABLE "Portfolio" (
 
 -- CreateTable
 CREATE TABLE "About" (
-    "id" SERIAL NOT NULL,
+    "id" INTEGER NOT NULL DEFAULT 1,
+    "title" TEXT NOT NULL,
     "shortDescription" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "resumeUrl" TEXT NOT NULL,
@@ -60,12 +62,27 @@ CREATE TABLE "Experience" (
 
 -- CreateTable
 CREATE TABLE "Skill" (
-    "id" SERIAL NOT NULL,
+    "id" INTEGER NOT NULL DEFAULT 1,
     "name" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Skill_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Education" (
+    "id" SERIAL NOT NULL,
+    "degree" TEXT NOT NULL,
+    "school" TEXT NOT NULL,
+    "location" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3),
+    "gpa" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Education_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

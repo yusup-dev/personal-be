@@ -1,4 +1,5 @@
 import { link } from "fs";
+import { get } from "http";
 import path from "path";
 import { title } from "process";
 import { fileURLToPath } from "url";
@@ -12,7 +13,8 @@ export const swaggerOptions = {
     info: {
       title: "Personal API Documentation",
       version: "1.0.0",
-      description: "A simple Personal API built with Node.js, Express, and Prisma",
+      description:
+        "A simple Personal API built with Node.js, Express, and Prisma",
     },
     servers: [
       { url: "http://localhost:3000", description: "Local development server" },
@@ -20,7 +22,11 @@ export const swaggerOptions = {
     tags: [
       { name: "Auth", description: "Authentication endpoints" },
       { name: "Posts", description: "Post management endpoints" },
-      { name: "Comments", description: "Comment management endpoints" },
+      { name: "Portfolio", description: "Portfolio management endpoints" },
+      { name: "Experience", description: "Experience management endpoints" },
+      { name: "Skills", description: "Skill management endpoints" },
+      { name: "Education", description: "Education management endpoints" },
+      { name: "About", description: "About profile endpoints" },
     ],
     components: {
       securitySchemes: {
@@ -30,67 +36,9 @@ export const swaggerOptions = {
           bearerFormat: "JWT",
         },
       },
-      schemas: {
-        Post: {
-          type: "object",
-          required: ["title", "content"],
-          properties: {
-            id: { type: "integer" },
-            title: { type: "string" },
-            content: { type: "string" },
-            imageUrl: { type: "string" },
-            authorId: { type: "integer" },
-          },
-        },
-        User: {
-          type: "object",
-          required: ["name", "email", "password"],
-          properties: {
-            id: { type: "integer" },
-            name: { type: "string" },
-            email: { type: "string", format: "email" },
-          },
-        },
-        Comment: {
-          type: "object",
-          required: ["text", "postId"],
-          properties: {
-            id: { type: "integer" },
-            text: { type: "string" },
-            postId: { type: "integer" },
-            authorId: { type: "integer" },
-          },
-        },
-      },
     },
     paths: {
       // --- AUTH ---
-      "/api/auth/signup": {
-        post: {
-          summary: "Register a new user",
-          tags: ["Auth"],
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  required: ["name", "email", "password"],
-                  properties: {
-                    name: { type: "string" },
-                    email: { type: "string" },
-                    password: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            201: { description: "User registered successfully" },
-            400: { description: "Bad request" },
-          },
-        },
-      },
       "/api/auth/login": {
         post: {
           summary: "User login",
@@ -121,11 +69,6 @@ export const swaggerOptions = {
         get: {
           summary: "Get all posts",
           tags: ["Posts"],
-          parameters: [
-            { name: "page", in: "query", schema: { type: "integer" } },
-            { name: "limit", in: "query", schema: { type: "integer" } },
-            { name: "search", in: "query", schema: { type: "string" } },
-          ],
           responses: {
             200: { description: "List of posts" },
           },
@@ -217,10 +160,56 @@ export const swaggerOptions = {
           },
         },
       },
+      "/api/posts/{id}/image": {
+  get: {
+    summary: "Get post image",
+    tags: ["Posts"],
+    parameters: [
+      {
+        name: "id",
+        in: "path",
+        required: true,
+        schema: {
+          type: "integer",
+        },
+      },
+    ],
+    responses: {
+      200: {
+        description: "Post image",
+        content: {
+          "image/jpeg": {
+            schema: {
+              type: "string",
+              format: "binary",
+            },
+          },
+          "image/png": {
+            schema: {
+              type: "string",
+              format: "binary",
+            },
+          },
+        },
+      },
+      404: {
+        description: "Image not found",
+      },
+    },
+  },
+},
       // --- PORTFOLIO ---
       "/api/portfolios": {
+        get: {
+          summary: "Get all portfolios",
+          tags: ["Portfolio"],
+          responses: {
+            200: { description: "List of portfolios" },
+          },
+        },
+
         post: {
-          summary : "Create a portfolio",
+          summary: "Create portfolio",
           tags: ["Portfolio"],
           security: [{ bearerAuth: [] }],
           requestBody: {
@@ -228,10 +217,10 @@ export const swaggerOptions = {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["title", "link"],
                   properties: {
                     title: { type: "string" },
-                    link: { type: "string" },
+                    github: { type: "string" },
+                    article: { type: "string" },
                   },
                 },
               },
@@ -240,54 +229,44 @@ export const swaggerOptions = {
           responses: {
             201: { description: "Portfolio created" },
           },
-        }
+        },
       },
-      // --- COMMENTS ---
-      "/api/comments": {
-        post: {
-          summary: "Create a comment",
-          tags: ["Comments"],
+
+      "/api/portfolios/{id}": {
+        patch: {
+          summary: "Update portfolio",
+          tags: ["Portfolio"],
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
           requestBody: {
             content: {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["text", "postId"],
                   properties: {
-                    text: { type: "string" },
-                    postId: { type: "integer" },
+                    title: { type: "string" },
+                    github: { type: "string" },
+                    article: { type: "string" },
                   },
                 },
               },
             },
           },
           responses: {
-            201: { description: "Comment created" },
+            200: { description: "Portfolio updated" },
           },
         },
-      },
-      "/api/comments/post/{postId}": {
-        get: {
-          summary: "Get comments for a post",
-          tags: ["Comments"],
-          parameters: [
-            {
-              name: "postId",
-              in: "path",
-              required: true,
-              schema: { type: "integer" },
-            },
-          ],
-          responses: {
-            200: { description: "List of comments" },
-          },
-        },
-      },
-      "/api/comments/{id}": {
+
         delete: {
-          summary: "Delete a comment",
-          tags: ["Comments"],
+          summary: "Delete portfolio",
+          tags: ["Portfolio"],
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -298,7 +277,395 @@ export const swaggerOptions = {
             },
           ],
           responses: {
-            204: { description: "Comment deleted" },
+            200: { description: "Portfolio deleted" },
+          },
+        },
+      },
+      // SKILL
+      "/api/skills": {
+        get: {
+          summary: "Get all skills",
+          tags: ["Skills"],
+          responses: {
+            200: { description: "List of skills" },
+          },
+        },
+        post: {
+          summary: "Create skill",
+          tags: ["Skills"],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    category: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Skill created" },
+          },
+        },
+      },
+
+      "/api/skills/{id}": {
+        patch: {
+          summary: "Update skill",
+          tags: ["Skills"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    category: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Skill updated" },
+          },
+        },
+
+        delete: {
+          summary: "Delete skill",
+          tags: ["Skills"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          responses: {
+            200: { description: "Skill deleted" },
+          },
+        },
+      },
+      // EXPERIENCE
+      "/api/experiences": {
+        get: {
+          summary: "Get all experiences",
+          tags: ["Experience"],
+          responses: {
+            200: { description: "List of experiences" },
+          },
+        },
+        post: {
+          summary: "Create experience",
+          tags: ["Experience"],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    position: { type: "string" },
+                    company: { type: "string" },
+                    location: { type: "string" },
+                    description: { type: "string" },
+                    startDate: { type: "string", format: "date" },
+                    endDate: { type: "string", format: "date" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Experience created" },
+          },
+        },
+      },
+
+      "/api/experiences/{id}": {
+        patch: {
+          summary: "Update experience",
+          tags: ["Experience"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    position: { type: "string" },
+                    company: { type: "string" },
+                    location: { type: "string" },
+                    description: { type: "string" },
+                    startDate: { type: "string", format: "date" },
+                    endDate: { type: "string", format: "date" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Experience updated" },
+          },
+        },
+
+        delete: {
+          summary: "Delete experience",
+          tags: ["Experience"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          responses: {
+            200: { description: "Experience deleted" },
+          },
+        },
+      },
+      // ABOUT
+      "/api/about/{id}": {
+        patch: {
+          summary: "Update about profile",
+          tags: ["About"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          requestBody: {
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    shortDescription: { type: "string" },
+                    description: { type: "string" },
+                    contactLink: { type: "string" },
+                    pdf: {
+                      type: "string",
+                      format: "binary",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "About updated" },
+          },
+        },
+        get: {
+          summary: "Get about by id",
+          tags: ["About"],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer" },
+            },
+          ],
+          responses: {
+            200: { description: "About detail" },
+          },
+        },
+      },
+      "/api/about/{id}/download": {
+        get: {
+          summary: "Download resume PDF",
+          tags: ["About"],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: {
+                type: "integer",
+              },
+              description: "About ID",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Resume PDF downloaded",
+              content: {
+                "application/pdf": {
+                  schema: {
+                    type: "string",
+                    format: "binary",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Resume not found",
+            },
+          },
+        },
+      },
+      // Education
+      "/api/educations": {
+        get: {
+          summary: "Get all education records",
+          tags: ["Education"],
+          responses: {
+            200: {
+              description: "List of education",
+            },
+          },
+        },
+
+        post: {
+          summary: "Create education",
+          tags: ["Education"],
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    degree: {
+                      type: "string",
+                      example: "Bachelor of Computer Science",
+                    },
+                    school: {
+                      type: "string",
+                      example: "Ibn Khaldun University",
+                    },
+                    location: {
+                      type: "string",
+                      example: "Bogor, Indonesia",
+                    },
+                    startDate: {
+                      type: "string",
+                      format: "date",
+                    },
+                    endDate: {
+                      type: "string",
+                      format: "date",
+                    },
+                    gpa: {
+                      type: "string",
+                      example: 3.8,
+                    },
+                    description: {
+                      type: "string",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Education created successfully",
+            },
+          },
+        },
+      },
+
+      "/api/educations/{id}": {
+        patch: {
+          summary: "Update education",
+          tags: ["Education"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: {
+                type: "integer",
+              },
+            },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    degree: { type: "string" },
+                    school: { type: "string" },
+                    location: { type: "string" },
+                    startDate: {
+                      type: "string",
+                      format: "date",
+                    },
+                    endDate: {
+                      type: "string",
+                      format: "date",
+                    },
+                    gpa: { type: "string" },
+                    description: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Education updated successfully",
+            },
+            404: {
+              description: "Education not found",
+            },
+          },
+        },
+
+        delete: {
+          summary: "Delete education",
+          tags: ["Education"],
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: {
+                type: "integer",
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Education deleted successfully",
+            },
           },
         },
       },

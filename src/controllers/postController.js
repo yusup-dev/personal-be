@@ -26,54 +26,18 @@ export const createPost = catchAsync(async (req, res) => {
   res.status(201).json({
     status: "success",
     data: {
-      post: newPost,
+      newPost,
     },
   });
 });
 
 // Get all post
 export const getAllPosts = catchAsync(async (req, res) => {
-  // get params from Query String
-
-  const page = req.query.page * 1 || 1;
-  const limit = req.query.limit * 1 || 10;
-  const search = req.query.search || "";
-
-  // calculate the skip value
-  const skip = (page - 1) * limit;
-
-  const where = {}; // Dynamic Where clause for search functionality
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { content: { contains: search, mode: "insensitive" } },
-    ];
-  }
-  // get posts from database with author information
-  const [posts, totalPosts] = await prisma.$transaction([
-    prisma.post.findMany({
-      where,
-      skip,
-      take: limit,
-      include: {
-        author: {
-          select: { name: true, email: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.post.count({ where }), // get the total number of posts for pagination
-  ]);
-
-  // calculate total pages
-  const totalPages = Math.ceil(totalPosts / limit);
+  const posts = await prisma.post.findMany({});
 
   res.status(200).json({
     status: "success",
     results: posts.length,
-    totalPosts,
-    totalPages,
-    currentPage: page,
     data: { posts },
   });
 });
@@ -84,14 +48,7 @@ export const getPost = catchAsync(async (req, res) => {
   const post = await prisma.post.findUnique({
     where: {
       id: parseInt(id),
-    },
-    include: {
-      author: {
-        select: {
-          name: true,
-        },
-      },
-    },
+    }
   });
 
   // check the existence of the post
@@ -206,7 +163,27 @@ export const updatePost = catchAsync(async (req, res) => {
   res.status(200).json({
     status: "success",
     data: {
-      post: updatedPost,
+      updatedPost,
     },
   });
+});
+
+export const getPostImage = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  const post = await prisma.post.findUnique({
+    where: {
+      id: parseInt(id),
+    },
+  });
+
+  if (!post || !post.image) {
+    const error = new Error("Image not found!");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const imagePath = path.join("public", post.image);
+
+  res.sendFile(path.resolve(imagePath));
 });
