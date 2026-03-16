@@ -1,33 +1,49 @@
 import prisma from "../utils/prisma.js";
-import fs from "fs";
-import path from "path";
 import catchAsync from "../utils/catchAsync.js";
+import { supabase } from "../lib/supabase.js";
 
 export const createPost = catchAsync(async (req, res) => {
   const { title, content } = req.body;
 
-  // check does image exist or not
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
-
-  // check the inputs
   if (!title || !content) {
     const error = new Error("Title and content are required!");
     error.statusCode = 400;
     throw error;
   }
+
+  let imageUrl = null;
+
+  if (req.file) {
+    const fileName = `posts/post-${Date.now()}-${req.file.originalname}`;
+
+    const { error } = await supabase.storage
+      .from("personal")
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const { data } = supabase.storage
+      .from("personal")
+      .getPublicUrl(fileName);
+
+    imageUrl = data.publicUrl;
+  }
+
   const newPost = await prisma.post.create({
     data: {
       title,
       content,
-      image: imagePath,
+      image: imageUrl,
     },
   });
 
   res.status(201).json({
     status: "success",
-    data: {
-      newPost,
-    },
+    data: { newPost },
   });
 });
 
@@ -66,10 +82,9 @@ export const getPost = catchAsync(async (req, res) => {
   });
 });
 
-// Delete a post
 export const deletePost = catchAsync(async (req, res) => {
   const { id } = req.params;
-  // get a post for check the existence of it and its image
+
   const post = await prisma.post.findUnique({
     where: {
       id: parseInt(id),
@@ -82,20 +97,25 @@ export const deletePost = catchAsync(async (req, res) => {
     throw error;
   }
 
-  // delete the image from hard disk
+  // delete image from Supabase Storage
   if (post.image) {
-    const filePath = path.join("public", post.image);
+    const marker = "/storage/v1/object/public/personal/";
+    const filePath = post.image.includes(marker)
+      ? post.image.split(marker)[1]
+      : null;
 
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Failed to delete local image", err);
-      } else {
-        console.log("Local image deleted successfully");
+    if (filePath) {
+      const { error: storageError } = await supabase.storage
+        .from("personal")
+        .remove([filePath]);
+
+      if (storageError) {
+        console.error("Failed to delete image from Supabase:", storageError.message);
       }
-    });
+    }
   }
 
-  // delete from the database
+  // delete post from database
   await prisma.post.delete({
     where: {
       id: parseInt(id),
@@ -110,14 +130,11 @@ export const deletePost = catchAsync(async (req, res) => {
 
 // Update a post
 export const updatePost = catchAsync(async (req, res) => {
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const { title, content } = req.body;
 
-  // first find a old post
   const post = await prisma.post.findUnique({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id },
   });
 
   if (!post) {
@@ -126,64 +143,61 @@ export const updatePost = catchAsync(async (req, res) => {
     throw error;
   }
 
-  // manage the image
-  // default set it to previous image
-  let imagePath = post.image;
+  let imageUrl = post.image;
 
-  // if user send new image
   if (req.file) {
-    // setting new image path
-    imagePath = `/uploads/${req.file.filename}`;
 
-    // delete the old image
+    // delete old image from supabase
     if (post.image) {
-      const oldPath = path.join("public", post.image);
-      fs.unlink(oldPath, (err) => {
-        if (err) {
-          console.error("Failed to delete old image", err);
-        } else {
-          console.log("Old image deleted successfully");
+      const marker = "/storage/v1/object/public/personal/";
+      const oldPath = post.image.includes(marker)
+        ? post.image.split(marker)[1]
+        : null;
+
+      if (oldPath) {
+        const { error: deleteError } = await supabase.storage
+          .from("personal")
+          .remove([oldPath]);
+
+        if (deleteError) {
+          console.error("Failed to delete old image:", deleteError.message);
         }
-      });
+      }
     }
+
+    // upload new image
+    const fileName = `posts/post-${Date.now()}-${req.file.originalname}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("personal")
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+
+    // get public url
+    const { data } = supabase.storage
+      .from("personal")
+      .getPublicUrl(fileName);
+
+    imageUrl = data.publicUrl;
   }
 
-  // update the post
   const updatedPost = await prisma.post.update({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id },
     data: {
-      title: title || post.title, // if title was not new ,set it to old title
-      content: content || post.content, // if the content was not new , set it to old content
-      image: imagePath,
+      title: title || post.title,
+      content: content || post.content,
+      image: imageUrl,
     },
   });
 
   res.status(200).json({
     status: "success",
-    data: {
-      updatedPost,
-    },
+    data: { updatedPost },
   });
 });
 
-export const getPostImage = catchAsync(async (req, res) => {
-  const { id } = req.params;
-
-  const post = await prisma.post.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-  });
-
-  if (!post || !post.image) {
-    const error = new Error("Image not found!");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const imagePath = path.join("public", post.image);
-
-  res.sendFile(path.resolve(imagePath));
-});

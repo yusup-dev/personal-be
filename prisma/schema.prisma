@@ -61,7 +61,7 @@ model Experience {
 }
 
 model Skill {
-  id        Int      @id @default(1)
+  id        Int      @id @default(autoincrement())
   name      String
   category  String
   createdAt DateTime @default(now())

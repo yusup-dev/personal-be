@@ -1,16 +1,14 @@
 import catchAsync from "../utils/catchAsync.js";
 import prisma from "../utils/prisma.js";
-import fs from "fs";
-import path from "path";
+import { supabase } from "../lib/supabase.js";
+
 
 export const updateAbout = catchAsync(async (req, res) => {
   const { title, shortDescription, description, contactLink } = req.body;
-  const id = req.params.id;
+  const id = Number(req.params.id);
 
   const about = await prisma.about.findUnique({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id },
   });
 
   if (!about) {
@@ -19,34 +17,56 @@ export const updateAbout = catchAsync(async (req, res) => {
     throw error;
   }
 
-  let pdfPath = about.resumeUrl;
+  let pdfUrl = about.resumeUrl;
 
   if (req.file) {
-    pdfPath = `/uploads/${req.file.filename}`;
-
-    // delete old pdf
+    // delete old resume from supabase
     if (about.resumeUrl) {
-      const oldPath = path.join("public", about.resumeUrl);
-      fs.unlink(oldPath, (err) => {
-        if (err) {
-          console.error("Failed to delete old pdf", err);
-        } else {
-          console.log("Old pdf deleted successfully");
+      const marker = "/storage/v1/object/public/personal/";
+      const oldPath = about.resumeUrl.includes(marker)
+        ? about.resumeUrl.split(marker)[1]
+        : null;
+
+      if (oldPath) {
+        const { error: deleteError } = await supabase.storage
+          .from("personal")
+          .remove([oldPath]);
+
+        if (deleteError) {
+          console.error("Failed to delete old resume:", deleteError.message);
         }
-      });
+      }
     }
+
+    // upload new resume
+    const fileName = `resume-${Date.now()}.pdf`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("personal")
+      .upload(`pdf/${fileName}`, req.file.buffer, {
+        contentType: "application/pdf",
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+
+    // get public url
+    const { data } = supabase.storage
+      .from("personal")
+      .getPublicUrl(`pdf/${fileName}`);
+
+    pdfUrl = data.publicUrl;
   }
 
   const updatedAbout = await prisma.about.update({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id },
     data: {
       title: title || about.title,
       shortDescription: shortDescription || about.shortDescription,
       description: description || about.description,
       contactLink: contactLink || about.contactLink,
-      resumeUrl: pdfPath,
+      resumeUrl: pdfUrl,
     },
   });
 
@@ -78,31 +98,4 @@ export const getAbout = catchAsync(async (req, res) => {
       about,
     },
   });
-});
-
-export const downloadResume = catchAsync(async (req, res) => {
-  const { id } = req.params;
-
-  const about = await prisma.about.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-  });
-
-  if (!about || !about.resumeUrl) {
-    const error = new Error("Resume not found!");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const filePath = path.join("public", about.resumeUrl);
-
-  // check file exist
-  if (!fs.existsSync(filePath)) {
-    const error = new Error("File not found on server!");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  res.download(filePath, "resume.pdf");
 });
